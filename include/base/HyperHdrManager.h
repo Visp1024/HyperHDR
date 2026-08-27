@@ -87,6 +87,7 @@ public slots:
 	void setInstanceColor(int instance, int priority,ColorRgb ledColors, int timeout_ms);
 	void setInstanceEffect(int instance, QString effectName, int priority);
 	void clearInstancePriority(int instance, int priority);
+	void setInstancesBrightnessScale(float brightnessScale);
 	std::list<EffectDefinition> getEffects();
 
 	void handleLutRequestSignal();

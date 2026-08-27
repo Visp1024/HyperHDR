@@ -60,6 +60,21 @@
 
 #include "HyperHdrDaemon.h"
 #include "SystrayHandler.h"
+#include "BrightnessManager.h"
+
+namespace
+{
+	// brightness levels offered by the tray menu
+	const int BRIGHTNESS_LEVEL_MIN = 10;
+	const int BRIGHTNESS_LEVEL_MAX = 100;
+	const int BRIGHTNESS_LEVEL_STEP = 10;
+
+	#ifdef _WIN32
+		const int HOTKEY_BRIGHTNESS_UP = 1;
+		const int HOTKEY_BRIGHTNESS_DOWN = 2;
+		const int HOTKEY_NIGHT_MODE = 3;
+	#endif
+}
 
 #ifdef __linux__
 #define SYSTRAY_WIDGET_LIB "libsystray-widget.so"
@@ -91,6 +106,13 @@ SystrayHandler::SystrayHandler(HyperHdrDaemon* hyperhdrDaemon, quint16 webPort, 
 	connect(instanceManager.get(), &HyperHdrManager::SignalInstanceStateChanged, this, &SystrayHandler::signalInstanceStateChangedHandler);
 	connect(instanceManager.get(), &HyperHdrManager::SignalSettingsChanged, this, &SystrayHandler::signalSettingsChangedHandler);
 
+	hyperhdrDaemon->getBrightnessManager(_brightnessManager);
+	if (_brightnessManager != nullptr)
+	{
+		connect(_brightnessManager.get(), &BrightnessManager::SignalBrightnessChanged, this, &SystrayHandler::signalBrightnessChangedHandler);
+		connect(_brightnessManager.get(), &BrightnessManager::SignalHotkeysChanged, this, &SystrayHandler::signalHotkeysChangedHandler);
+	}
+
 #ifdef __linux__
 	// Load library
 	_library = dlopen(SYSTRAY_WIDGET_LIB, RTLD_NOW);
@@ -117,6 +139,31 @@ SystrayHandler::SystrayHandler(HyperHdrDaemon* hyperhdrDaemon, quint16 webPort, 
 #else
 	_haveSystray = SystrayInitialize(nullptr);
 #endif	
+
+#ifdef _WIN32
+	if (_haveSystray)
+	{
+		SystrayAssignHotkeyHandler([this](int hotkeyId) {
+			if (_brightnessManager == nullptr)
+				return;
+
+			switch (hotkeyId)
+			{
+				case HOTKEY_BRIGHTNESS_UP:
+					QUEUE_CALL_0(_brightnessManager.get(), increaseBrightness);
+					break;
+				case HOTKEY_BRIGHTNESS_DOWN:
+					QUEUE_CALL_0(_brightnessManager.get(), decreaseBrightness);
+					break;
+				case HOTKEY_NIGHT_MODE:
+					QUEUE_CALL_0(_brightnessManager.get(), toggleNightMode);
+					break;
+			}
+		});
+
+		updateHotkeys();
+	}
+#endif
 }
 
 SystrayHandler::~SystrayHandler()
@@ -385,6 +432,52 @@ void SystrayHandler::createSystray()
 		std::swap(effectsMenu->submenu, effectItem);
 	}
 
+	// brightness menu
+	std::unique_ptr<SystrayMenu> brightnessMenu = std::make_unique<SystrayMenu>();
+	loadSvg(brightnessMenu, ":/brightness.svg", _rootFolder);
+	brightnessMenu->label = "&Brightness";
+	brightnessMenu->context = this;
+
+	// night mode menu
+	std::unique_ptr<SystrayMenu> nightModeMenu = std::make_unique<SystrayMenu>();
+	loadSvg(nightModeMenu, ":/nightmode.svg", _rootFolder);
+	nightModeMenu->label = "&Night mode";
+	nightModeMenu->context = this;
+	nightModeMenu->isDisabled = (_brightnessManager == nullptr);
+	nightModeMenu->isChecked = (_brightnessManager != nullptr && _brightnessManager->isNightMode());
+	nightModeMenu->callback = [](SystrayMenu* m) {
+		SystrayHandler* sh = qobject_cast<SystrayHandler*>(m->context);
+		if (sh != nullptr)
+			QUEUE_CALL_0(sh, toggleNightMode);
+	};
+
+	if (_brightnessManager == nullptr)
+		brightnessMenu->isDisabled = true;
+	else
+	{
+		const int currentBrightness = _brightnessManager->getBrightness();
+
+		for (int level = BRIGHTNESS_LEVEL_MIN; level <= BRIGHTNESS_LEVEL_MAX; level += BRIGHTNESS_LEVEL_STEP)
+		{
+			std::unique_ptr<SystrayMenu> brightnessItem = std::make_unique<SystrayMenu>();
+			brightnessItem->label = std::to_string(level) + "%";
+			brightnessItem->checkGroup = level;
+			// the current value does not have to be a multiple of the step, so mark the closest level
+			brightnessItem->isChecked = (currentBrightness > level - BRIGHTNESS_LEVEL_STEP && currentBrightness <= level) ||
+										(level == BRIGHTNESS_LEVEL_MIN && currentBrightness <= level);
+			brightnessItem->context = this;
+			brightnessItem->callback = [](SystrayMenu* m) {
+				SystrayHandler* sh = qobject_cast<SystrayHandler*>(m->context);
+				int level = m->checkGroup;
+				if (sh != nullptr)
+					QUEUE_CALL_1(sh, setBrightness, int, level);
+			};
+
+			std::swap(brightnessMenu->submenu, brightnessItem->next);
+			std::swap(brightnessMenu->submenu, brightnessItem);
+		}
+	}
+
 	// clear menu
 	std::unique_ptr<SystrayMenu> clearMenu = std::make_unique<SystrayMenu>();
 	loadSvg(clearMenu, ":/clear.svg", _rootFolder);
@@ -436,14 +529,16 @@ void SystrayHandler::createSystray()
 	std::swap(clearMenu->next, separator2);
 	std::swap(effectsMenu->next, clearMenu);
 	std::swap(colorMenu->next, effectsMenu);
+	std::swap(nightModeMenu->next, colorMenu);
+	std::swap(brightnessMenu->next, nightModeMenu);
 
 #ifdef _WIN32
-	std::swap(instances->next, colorMenu);
+	std::swap(instances->next, brightnessMenu);
 	std::swap(separator3->next, instances);
 	std::swap(autostartMenu->next, separator3);
 	std::swap(separator1->next, autostartMenu);
 #else
-	std::swap(instances->next, colorMenu);
+	std::swap(instances->next, brightnessMenu);
 	std::swap(separator1->next, instances);
 #endif
 
@@ -478,6 +573,136 @@ void SystrayHandler::selectInstance()
 {
 	createSystray();
 }
+
+void SystrayHandler::setBrightness(int percent)
+{
+	if (_brightnessManager != nullptr)
+		_brightnessManager->setBrightness(percent);
+}
+
+void SystrayHandler::toggleNightMode()
+{
+	if (_brightnessManager != nullptr)
+		_brightnessManager->toggleNightMode();
+}
+
+void SystrayHandler::signalBrightnessChangedHandler(int /*brightness*/, bool /*nightMode*/)
+{
+	createSystray();
+}
+
+void SystrayHandler::signalHotkeysChangedHandler()
+{
+	#ifdef _WIN32
+		updateHotkeys();
+	#endif
+}
+
+#ifdef _WIN32
+bool SystrayHandler::parseHotkey(const QString& definition, unsigned int& modifiers, unsigned int& virtualKey)
+{
+	modifiers = 0;
+	virtualKey = 0;
+
+	const QStringList tokens = definition.split('+', Qt::SkipEmptyParts);
+
+	for (const QString& rawToken : tokens)
+	{
+		const QString token = rawToken.trimmed().toUpper();
+
+		if (token.isEmpty())
+			return false;
+		else if (token == "CTRL" || token == "CONTROL")
+			modifiers |= MOD_CONTROL;
+		else if (token == "ALT")
+			modifiers |= MOD_ALT;
+		else if (token == "SHIFT")
+			modifiers |= MOD_SHIFT;
+		else if (token == "WIN" || token == "META")
+			modifiers |= MOD_WIN;
+		else if (virtualKey != 0)
+			return false;
+		else if (token == "UP")
+			virtualKey = VK_UP;
+		else if (token == "DOWN")
+			virtualKey = VK_DOWN;
+		else if (token == "LEFT")
+			virtualKey = VK_LEFT;
+		else if (token == "RIGHT")
+			virtualKey = VK_RIGHT;
+		else if (token == "PLUS" || token == "ADD")
+			virtualKey = VK_ADD;
+		else if (token == "MINUS" || token == "SUBTRACT")
+			virtualKey = VK_SUBTRACT;
+		else if (token == "PAGEUP")
+			virtualKey = VK_PRIOR;
+		else if (token == "PAGEDOWN")
+			virtualKey = VK_NEXT;
+		else if (token == "HOME")
+			virtualKey = VK_HOME;
+		else if (token == "END")
+			virtualKey = VK_END;
+		else if (token == "INSERT")
+			virtualKey = VK_INSERT;
+		else if (token == "DELETE")
+			virtualKey = VK_DELETE;
+		else if (token == "SPACE")
+			virtualKey = VK_SPACE;
+		else if (token.size() >= 2 && token.size() <= 3 && token.at(0) == QLatin1Char('F') && token.mid(1).toInt() >= 1 && token.mid(1).toInt() <= 24)
+			virtualKey = VK_F1 + (token.mid(1).toInt() - 1);
+		else if (token.size() == 1 && ((token.at(0).unicode() >= 'A' && token.at(0).unicode() <= 'Z') ||
+									   (token.at(0).unicode() >= '0' && token.at(0).unicode() <= '9')))
+			virtualKey = token.at(0).unicode();
+		else
+			return false;
+	}
+
+	// a global hotkey without any modifier would swallow the key for the whole system
+	return (virtualKey != 0 && modifiers != 0);
+}
+
+void SystrayHandler::updateHotkeys()
+{
+	if (!_haveSystray)
+		return;
+
+	SystrayUnregisterHotkeys();
+
+	if (_brightnessManager == nullptr || !_brightnessManager->areHotkeysEnabled())
+		return;
+
+	const struct {
+		int				id;
+		const char*		action;
+	} hotkeyActions[] = {
+		{ HOTKEY_BRIGHTNESS_UP,		"up" },
+		{ HOTKEY_BRIGHTNESS_DOWN,	"down" },
+		{ HOTKEY_NIGHT_MODE,		"nightMode" }
+	};
+
+	for (const auto& hotkeyAction : hotkeyActions)
+	{
+		const QString definition = _brightnessManager->getHotkey(QString::fromLatin1(hotkeyAction.action)).trimmed();
+
+		if (definition.isEmpty())
+			continue;
+
+		unsigned int modifiers = 0, virtualKey = 0;
+
+		if (!parseHotkey(definition, modifiers, virtualKey))
+		{
+			printf("Could not parse the '%s' hotkey definition: %s\n", hotkeyAction.action, definition.toStdString().c_str());
+			continue;
+		}
+
+		if (!SystrayRegisterHotkey(hotkeyAction.id, modifiers, virtualKey))
+		{
+			printf("Could not register the '%s' hotkey (%s). It is probably already used by another application.\n",
+				hotkeyAction.action, definition.toStdString().c_str());
+		}
+	}
+}
+#endif
 
 void SystrayHandler::setColor(ColorRgb color)
 {

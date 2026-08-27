@@ -47,6 +47,8 @@ namespace
 	std::list<HBITMAP> bitmaps;
 	ULONG_PTR gdiToken = 0;
 	std::function<void(WPARAM suspend)> queueHandler = nullptr;
+	std::function<void(int hotkeyId)> hotkeyHandler = nullptr;
+	std::list<int> hotkeys;
 }
 
 HWND SystrayGetWindow()
@@ -59,11 +61,48 @@ void SystrayAssignQueueHandler(std::function<void(WPARAM wparam)> _queueHandler)
 	queueHandler = _queueHandler;
 }
 
+void SystrayAssignHotkeyHandler(std::function<void(int hotkeyId)> _hotkeyHandler)
+{
+	hotkeyHandler = _hotkeyHandler;
+}
+
+bool SystrayRegisterHotkey(int hotkeyId, unsigned int modifiers, unsigned int virtualKey)
+{
+	if (window == nullptr)
+		return false;
+
+	if (!RegisterHotKey(window, hotkeyId, modifiers | MOD_NOREPEAT, virtualKey))
+		return false;
+
+	hotkeys.push_back(hotkeyId);
+	return true;
+}
+
+void SystrayUnregisterHotkeys()
+{
+	if (window != nullptr)
+	{
+		for (auto hotkeyId : hotkeys)
+		{
+			UnregisterHotKey(window, hotkeyId);
+		}
+	}
+
+	hotkeys.clear();
+}
+
 static LRESULT CALLBACK _tray_wnd_proc(HWND hwnd, UINT msg, WPARAM wparam,
                                        LPARAM lparam)
 {
 	switch (msg)
 	{
+		case WM_HOTKEY:
+			if (hotkeyHandler != nullptr)
+			{
+				hotkeyHandler(static_cast<int>(wparam));
+			}
+			return 0;
+
 		case WM_POWERBROADCAST:
 			if (queueHandler != nullptr && (wparam == PBT_APMSUSPEND || wparam == PBT_APMRESUMESUSPEND || wparam == PBT_POWERSETTINGCHANGE))
 			{				
@@ -312,6 +351,9 @@ void SystrayUpdate(SystrayMenu *tray)
 void SystrayClose()
 {
 	queueHandler = nullptr;
+
+	SystrayUnregisterHotkeys();
+	hotkeyHandler = nullptr;
 
 	if (systrayIcon.hIcon != nullptr)
 	{

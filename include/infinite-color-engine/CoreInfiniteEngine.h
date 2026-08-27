@@ -34,6 +34,7 @@ public:
 	void setCurrentSmoothingConfigParams(unsigned cfgID);
 	void incomingColors(std::vector<linalg::aliases::float3>&& _ledBuffer);
 	void setProcessingEnabled(bool enabled);
+	void setBrightnessScale(float brightnessScale);
 	void updateCurrentProcessingConfig(const QJsonObject& config);
 	QJsonArray getCurrentProcessingConfig();
 

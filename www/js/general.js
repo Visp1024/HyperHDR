@@ -6,6 +6,7 @@ $(document).ready(function()
 	var confName;
 	var conf_editor = null;
 	var conf_editor_logs = null;
+	var conf_editor_brightness = null;
 
 	$('#conf_cont_logs').append(createOptPanel('<svg data-src="svg/logs_panel.svg" width="18" height="18" fill="currentColor" class="svg4hyperhdr"></svg>', $.i18n("edt_conf_log_heading_title"), 'logs_editor_container', 'btn_submit_logs'));
 	$('#conf_cont_logs').append(createHelpTable(window.schema.logger.properties, $.i18n("edt_conf_log_heading_title")));
@@ -42,6 +43,25 @@ $(document).ready(function()
 	$('#btn_submit').off().on('click', function()
 	{
 		requestWriteConfig(conf_editor.getValue());
+	});
+
+	// brightness & night mode
+	$('#conf_cont').append(createOptPanel('<svg data-src="svg/moon.svg" fill="currentColor" class="svg4hyperhdr"></svg>', $.i18n("edt_conf_brightness_heading_title"), 'editor_container_brightness', 'btn_submit_brightness'));
+	$('#conf_cont').append(createHelpTable(window.schema.brightness.properties, $.i18n("edt_conf_brightness_heading_title")));
+
+	conf_editor_brightness = createJsonEditor('editor_container_brightness',
+	{
+		brightness: window.schema.brightness
+	}, true, true);
+
+	conf_editor_brightness.on('change', function()
+	{
+		conf_editor_brightness.validate().length ? $('#btn_submit_brightness').attr('disabled', true) : $('#btn_submit_brightness').attr('disabled', false);
+	});
+
+	$('#btn_submit_brightness').off().on('click', function()
+	{
+		requestWriteConfig(conf_editor_brightness.getValue());
 	});
 
 	// Instance handling

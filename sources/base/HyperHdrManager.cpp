@@ -189,6 +189,14 @@ void HyperHdrManager::clearInstancePriority(int instance, int /*priority*/)
 		}
 }
 
+void HyperHdrManager::setInstancesBrightnessScale(float brightnessScale)
+{
+	for (const auto& selInstance : std::as_const(_runningInstances))
+	{
+		QUEUE_CALL_1(selInstance.get(), setBrightnessScale, float, brightnessScale);
+	}
+}
+
 std::list<EffectDefinition> HyperHdrManager::getEffects()
 {
 	std::list<EffectDefinition> efxs;

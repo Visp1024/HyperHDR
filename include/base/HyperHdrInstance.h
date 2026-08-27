@@ -99,6 +99,7 @@ public slots:
 	void turnGrabbers(bool active, bool includingSystemGrabber, bool includingVideoGrabber);
 	void update();
 	void updateAdjustments(const QJsonObject& config);
+	void setBrightnessScale(float brightnessScale);
 	
 	
 	int setEffect(const QString& effectName, int priority, int timeout = -1, const QString& origin = "System");	

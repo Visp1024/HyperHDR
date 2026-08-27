@@ -189,6 +189,7 @@ void InfiniteProcessing::applyyAllProcessingSteps(std::vector<linalg::vec<float,
 			applyTemperature(color);
 			calibrateColorInColorspace(colorCalibration, color);
 			applyScaleOutput(color);
+			applyBrightnessScale(color);
 			color = srgbLinearToNonlinear(color);			
 			applyUserGamma(color);
 			applyBrightnessAndSaturation(color);			
@@ -623,6 +624,32 @@ void InfiniteProcessing::applyScaleOutput(linalg::vec<float, 3>& color) const
 		return;
 
 	color = linalg::clamp(color * _scaleOutput.value(), 0.0f, 1.0f);
+}
+
+
+void InfiniteProcessing::setBrightnessScale(float brightnessScale)
+{
+	_brightnessScale = std::clamp(brightnessScale, 0.0f, 1.0f);
+
+	if (_brightnessScale.value() == 1.f)
+		_brightnessScale.reset();
+
+	if (_log.size())
+	{
+		Info(_log, "--- USER BRIGHTNESS (ENABLED: {:s}) ---", ((_brightnessScale.has_value()) ? "true" : "false"));
+		if (_brightnessScale.has_value())
+		{
+			Info(_log, "SCALE:   {:0.3f}", _brightnessScale.value());
+		}
+	}
+}
+
+void InfiniteProcessing::applyBrightnessScale(linalg::vec<float, 3>& color) const
+{
+	if (!_brightnessScale.has_value())
+		return;
+
+	color = linalg::clamp(color * _brightnessScale.value(), 0.0f, 1.0f);
 }
 
 

@@ -101,6 +101,7 @@
 #include <memory>
 
 class HyperHdrManager;
+class BrightnessManager;
 class PerformanceCounters;
 class SysTray;
 class JsonServer;
@@ -152,6 +153,7 @@ public slots:
 	void getVideoGrabber(std::shared_ptr<GrabberHelper>& videoGrabber);
 	void getPerformanceCounters(std::shared_ptr<PerformanceCounters>& performanceCounters);
 	void getDiscoveryWrapper(std::shared_ptr<DiscoveryWrapper>& discoveryWrapper);
+	void getBrightnessManager(std::shared_ptr<BrightnessManager>& brightnessManager);
 
 private:
 	void startNetworkServices();
@@ -167,6 +169,7 @@ private:
 	std::shared_ptr<SoundCapture>  _soundCapture;
 	std::shared_ptr<PerformanceCounters> _performanceCounters;
 	std::shared_ptr<DiscoveryWrapper> _discoveryWrapper;
+	std::shared_ptr<BrightnessManager> _brightnessManager;
 	std::unique_ptr<QThread, std::function<void(QThread*)>> _flatProtoBuffersThread;
 	std::unique_ptr<QThread, std::function<void(QThread*)>> _networkThread;
 	std::unique_ptr<QThread, std::function<void (QThread*)>> _mqttThread;

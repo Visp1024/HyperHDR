@@ -571,6 +571,12 @@ void HyperHdrInstance::updateAdjustments(const QJsonObject& config)
 	update();
 }
 
+void HyperHdrInstance::setBrightnessScale(float brightnessScale)
+{
+	_infinite->setBrightnessScale(brightnessScale);
+	update();
+}
+
 bool HyperHdrInstance::clear(int priority, bool forceClearAll)
 {
 	bool isCleared = false;

@@ -67,6 +67,8 @@
 // instance zero default configuration
 #include <base/InstanceConfig.h>
 
+#include "BrightnessManager.h"
+
 // AccessManager
 #include <base/AccessManager.h>
 
@@ -158,6 +160,13 @@ HyperHdrDaemon::HyperHdrDaemon(const QString& rootPath, QCoreApplication* parent
 		});
 	connect(_instanceManager.get(), &HyperHdrManager::SignalSettingsChanged, _netOrigin.get(), &NetOrigin::handleSettingsUpdate);
 	_netOrigin->handleSettingsUpdate(settings::type::NETWORK, getSetting(settings::type::NETWORK));
+
+	// Brightness & night mode (works with and without the systray)
+	_brightnessManager = std::shared_ptr<BrightnessManager>(new BrightnessManager(_instanceManager, getSetting(settings::type::BRIGHTNESS), this),
+		[](BrightnessManager* brightnessManager) {
+			SMARTPOINTER_MESSAGE("BrightnessManager");
+			delete brightnessManager;
+		});
 
 	// set inital log lvl if the loglvl wasn't overwritten by arg
 	if (!logLvlOverwrite)
@@ -298,6 +307,9 @@ void HyperHdrDaemon::freeObjects()
 
 	Info(_log, "Releasing SmartPointer: SoundGrabber [ 7/15]");
 	_soundCapture = nullptr;
+
+	Info(_log, "Releasing SmartPointer: BrightnessManager");
+	_brightnessManager = nullptr;
 
 	Info(_log, "Releasing SmartPointer: BonjourBrowserWrapper [ 8/15]");
 	_discoveryWrapper = nullptr;
@@ -611,6 +623,11 @@ void HyperHdrDaemon::createSoftwareGrabberHelper(QJsonDocument config, QString d
 void HyperHdrDaemon::getInstanceManager(std::shared_ptr<HyperHdrManager>& retVal)
 {
 	retVal = _instanceManager;
+};
+
+void HyperHdrDaemon::getBrightnessManager(std::shared_ptr<BrightnessManager>& brightnessManager)
+{
+	brightnessManager = _brightnessManager;
 };
 
 void HyperHdrDaemon::getAccessManager(std::shared_ptr<AccessManager>& retVal)

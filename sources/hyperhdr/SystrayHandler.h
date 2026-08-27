@@ -35,7 +35,9 @@
 #include <base/HyperHdrInstance.h>
 #include <base/HyperHdrManager.h>
 #include <systray/Systray.h>
+
 class HyperHdrDaemon;
+class BrightnessManager;
 
 
 class SystrayHandler : public QObject
@@ -56,8 +58,12 @@ public slots:
 	void close();
 	void setAutorunState();
 	void selectInstance();
+	void setBrightness(int percent);
+	void toggleNightMode();
 
 private slots:
+	void signalBrightnessChangedHandler(int brightness, bool nightMode);
+	void signalHotkeysChangedHandler();
 	void signalInstanceStateChangedHandler(hyperhdr::InstanceState state, quint8 instance, const QString& name);
 	void signalSettingsChangedHandler(settings::type type, const QJsonDocument& data);
 	void createSystray();
@@ -66,10 +72,13 @@ private:
 
 	#ifdef _WIN32
 		bool getCurrentAutorunState();
+		void updateHotkeys();
+		static bool parseHotkey(const QString& definition, unsigned int& modifiers, unsigned int& virtualKey);
 	#endif
 	std::unique_ptr<SystrayMenu>	_menu;
 	bool							_haveSystray;
 	std::weak_ptr<HyperHdrManager>	_instanceManager;
+	std::shared_ptr<BrightnessManager> _brightnessManager;
 	quint16							_webPort;
 	QString							_rootFolder;
 	int								_selectedInstance;

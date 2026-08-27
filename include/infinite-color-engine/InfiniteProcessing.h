@@ -104,6 +104,9 @@ public:
 	void setScaleOutput(float scaleOutput);
 	void applyScaleOutput(linalg::vec<float, 3>& color) const;
 
+	void setBrightnessScale(float brightnessScale);
+	void applyBrightnessScale(linalg::vec<float, 3>& color) const;
+
 	void setPowerLimit(float powerLimit);
 	void applyPowerLimit(std::vector<linalg::vec<float, 3>>& linearRgbColors) const;
 
@@ -177,6 +180,8 @@ private:
 	std::optional<float> _saturation;
 
 	std::optional<float> _scaleOutput;
+
+	std::optional<float> _brightnessScale;
 
 	std::optional<float> _powerLimit;
 

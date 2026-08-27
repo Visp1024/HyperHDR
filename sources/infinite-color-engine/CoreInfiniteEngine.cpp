@@ -78,6 +78,11 @@ void CoreInfiniteEngine::setProcessingEnabled(bool enabled)
 	_processing->setProcessingEnabled(enabled);
 }
 
+void CoreInfiniteEngine::setBrightnessScale(float brightnessScale)
+{
+	_processing->setBrightnessScale(brightnessScale);
+}
+
 void CoreInfiniteEngine::updateCurrentProcessingConfig(const QJsonObject& config)
 {
 	_processing->updateCurrentConfig(config);

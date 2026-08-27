@@ -1,0 +1,143 @@
+{
+	"type" : "object",
+	"title" : "edt_conf_brightness_heading_title",
+	"required" : true,
+	"properties" :
+	{
+		"brightness" :
+		{
+			"type" : "integer",
+			"format": "stepper",
+			"step" : 5,
+			"title" : "edt_conf_brightness_level_title",
+			"minimum" : 5,
+			"maximum" : 100,
+			"default" : 100,
+			"append" : "edt_append_percent",
+			"required" : true,
+			"propertyOrder" : 1
+		},
+		"step" :
+		{
+			"type" : "integer",
+			"format": "stepper",
+			"step" : 1,
+			"title" : "edt_conf_brightness_step_title",
+			"minimum" : 1,
+			"maximum" : 50,
+			"default" : 10,
+			"append" : "edt_append_percent",
+			"required" : true,
+			"propertyOrder" : 2
+		},
+		"nightModeBrightness" :
+		{
+			"type" : "integer",
+			"format": "stepper",
+			"step" : 5,
+			"title" : "edt_conf_brightness_night_level_title",
+			"minimum" : 5,
+			"maximum" : 100,
+			"default" : 30,
+			"append" : "edt_append_percent",
+			"required" : true,
+			"propertyOrder" : 3
+		},
+		"nightModeSchedule" :
+		{
+			"type" : "boolean",
+			"format": "checkbox",
+			"title" : "edt_conf_brightness_night_schedule_title",
+			"default" : false,
+			"required" : true,
+			"propertyOrder" : 4
+		},
+		"nightModeStart" :
+		{
+			"type" : "string",
+			"format" : "time",
+			"title" : "edt_conf_brightness_night_start_title",
+			"minLength" : 5,
+			"maxLength" : 5,
+			"default" : "22:00",
+			"required" : true,
+			"options": {
+				"dependencies": {
+					"nightModeSchedule": true
+				}
+			},
+			"propertyOrder" : 5
+		},
+		"nightModeEnd" :
+		{
+			"type" : "string",
+			"format" : "time",
+			"title" : "edt_conf_brightness_night_end_title",
+			"minLength" : 5,
+			"maxLength" : 5,
+			"default" : "07:00",
+			"required" : true,
+			"options": {
+				"dependencies": {
+					"nightModeSchedule": true
+				}
+			},
+			"propertyOrder" : 6
+		},
+		"hotkeysEnable" :
+		{
+			"type" : "boolean",
+			"format": "checkbox",
+			"title" : "edt_conf_brightness_hotkeys_title",
+			"default" : true,
+			"required" : true,
+			"propertyOrder" : 7
+		},
+		"hotkeyBrightnessUp" :
+		{
+			"type" : "string",
+			"title" : "edt_conf_brightness_hotkey_up_title",
+			"minLength" : 0,
+			"maxLength" : 64,
+			"default" : "Ctrl+Alt+Up",
+			"required" : true,
+			"options": {
+				"dependencies": {
+					"hotkeysEnable": true
+				}
+			},
+			"propertyOrder" : 8
+		},
+		"hotkeyBrightnessDown" :
+		{
+			"type" : "string",
+			"title" : "edt_conf_brightness_hotkey_down_title",
+			"minLength" : 0,
+			"maxLength" : 64,
+			"default" : "Ctrl+Alt+Down",
+			"required" : true,
+			"options": {
+				"dependencies": {
+					"hotkeysEnable": true
+				}
+			},
+			"propertyOrder" : 9
+		},
+		"hotkeyNightMode" :
+		{
+			"type" : "string",
+			"title" : "edt_conf_brightness_hotkey_night_title",
+			"minLength" : 0,
+			"maxLength" : 64,
+			"default" : "Ctrl+Alt+N",
+			"required" : true,
+			"options": {
+				"dependencies": {
+					"hotkeysEnable": true
+				}
+			},
+			"propertyOrder" : 10
+		}
+	},
+	"additionalProperties" : false
+}

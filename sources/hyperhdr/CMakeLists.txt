@@ -7,8 +7,10 @@ endif()
 add_executable(hyperhdr
 	HyperHdrDaemon.h
 	SystrayHandler.h
+	BrightnessManager.h
 	HyperHdrDaemon.cpp
 	SystrayHandler.cpp
+	BrightnessManager.cpp
 	main.cpp
 	${hyperhdr_WIN_RC_PATH}
 )

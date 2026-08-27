@@ -73,6 +73,11 @@ struct SystrayMenu
 #ifdef _WIN32
 	HWND SystrayGetWindow();
 	void SystrayAssignQueueHandler(std::function<void(WPARAM wparam)> _queueHandler);
+
+	// global (system wide) hotkeys
+	void SystrayAssignHotkeyHandler(std::function<void(int hotkeyId)> _hotkeyHandler);
+	bool SystrayRegisterHotkey(int hotkeyId, unsigned int modifiers, unsigned int virtualKey);
+	void SystrayUnregisterHotkeys();
 #endif
 
 
