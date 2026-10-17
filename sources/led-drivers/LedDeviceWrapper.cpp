@@ -48,7 +48,10 @@ void LedDeviceWrapper::createLedDevice(QJsonObject config, int smoothingInterval
 		_ledDevice = std::unique_ptr<LedDevice, void(*)(LedDevice*)>(
 			hyperhdr::leds::CONSTRUCT_LED_DEVICE(config),
 			[](LedDevice* oldLed) {
-				QUEUE_CALL_0(oldLed, stop);
+				// stop() must finish (and write the final black frame) before the thread is quit,
+				// otherwise the queued call is dropped and the LEDs keep the last frame
+				if (oldLed->thread()->isRunning())
+					BLOCK_CALL_0(oldLed, stop);
 				hyperhdr::THREAD_REMOVER(QString("%1 [LedDevice]").arg(oldLed->thread()->objectName()), oldLed->thread(), oldLed);
 			}
 		);
